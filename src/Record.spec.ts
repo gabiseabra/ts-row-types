@@ -6,6 +6,7 @@ type Row = {
   b: { value: number }
   c: { value: number }
 }
+
 describe('Rec', () => {
   describe("Keys", () => {
     it("Extracts keys from record", () => {
