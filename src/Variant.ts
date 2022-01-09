@@ -1,9 +1,11 @@
 export namespace Variant {
-  export type Var<tag extends string = "kind">
+  export type Var<tag extends string = any>
     = { $tag: tag }
     & { [_ in tag]: string }
 
-  export type Keys<V extends Var<any>> = V[V["$tag"]]
+  export type Tag<V> = V extends Var<infer T> ? T : never
+
+  export type Keys<V extends Var> = V[Tag<V>]
 
   export type Query<
   V extends { [_ in K]: any },
@@ -12,23 +14,23 @@ export namespace Variant {
   > = Extract<V, { [_ in K]: A }>
 
   export type Pick<
-    V extends Var<any>,
+    V extends Var,
     K extends Keys<V> = Keys<V>
   > = Query<V, V["$tag"], K>
 
   export type Get<
-    V extends Var<any>,
+    V extends Var,
     K extends Keys<V> = Keys<V>
-  > = Omit<Pick<V, K>, "$tag" | V["$tag"]>
+  > = Omit<Pick<V, K>, "$tag" | Tag<V>>
 
   export type Meta<
-    V extends Var<string>,
+    V extends Var,
     K extends Keys<V> = Keys<V>
-  > = { $tag: V["$tag"] }
-    & { [_ in V["$tag"]]: K }
+  > = { $tag: Tag<V> }
+    & { [_ in Tag<V>]: K }
 
   export type At<
-    V extends Var<any>,
+    V extends Var,
     P extends keyof V,
     K extends Keys<V> = Keys<V>
   > = Pick<V, K>[P]
@@ -44,5 +46,5 @@ export function meta<V extends Variant.Var<string>>(V: V): Variant.Meta<V> {
   // over multiple keys, making the value level type of the discriminant `V[V["$tag"]]` incompatible.
   // This only breaks with union tag keys, and I can't find a legitimate use case for that, so let's pretend
   // they don't exist.
-  return { $tag: V.$tag, [V["$tag"]]: V[V.$tag] }
+  return { $tag: V.$tag, [V.$tag]: V[V.$tag] }
 }
