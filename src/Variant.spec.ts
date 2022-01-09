@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import * as V from './Variant'
-import { EQ, StrictEquals } from '../spec/Equals'
+import { Variant as V } from './Variant'
+import { EQ, StrictEquals } from '../spec/Equals.spec'
 
 type Col
   = { id: "a", type: "string" }
@@ -19,6 +19,21 @@ describe('Variant', () => {
         : StrictEquals<
           V.Keys<Col & { $tag: "type" }>,
           "string" | "number"
+        > = EQ
+    })
+  })
+
+  describe('Meta', () => {
+    it("Extracts meta keys from variant", () => {
+      const many
+        : StrictEquals<
+          V.Meta<Col & { $tag: "id" }>,
+          { $tag: "id", id: "a" | "b" | "c" }
+        > = EQ
+      const one
+        : StrictEquals<
+          V.Meta<Col & { $tag: "id" }, "a">,
+          { $tag: "id", id: "a" }
         > = EQ
     })
   })

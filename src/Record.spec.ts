@@ -1,5 +1,5 @@
-import * as R from './Record'
-import { EQ, StrictEquals } from '../spec/Equals'
+import { Record as R } from './Record'
+import { EQ, StrictEquals } from '../spec/Equals.spec'
 
 type Row = {
   a: { value: string }
