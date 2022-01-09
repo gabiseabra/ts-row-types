@@ -7,6 +7,8 @@ type Col
   | { id: "b", type: "number" }
   | { id: "c", type: "number" }
 
+const col: Col & { $tag: "id" } = { $tag: "id", id: "a", type: "string" }
+
 describe('Variant', () => {
   describe('Keys', () => {
     it("Extracts keys from tag", () => {
@@ -19,6 +21,13 @@ describe('Variant', () => {
         : StrictEquals<
           V.Keys<Col & { $tag: "type" }>,
           "string" | "number"
+        > = EQ
+      const equalKeys0
+        : StrictEquals<V.Keys<typeof col>, "a"> = EQ
+      const equalKeys1
+        : StrictEquals<
+          V.Keys<typeof col>,
+          typeof col[typeof col.$tag]
         > = EQ
     })
   })

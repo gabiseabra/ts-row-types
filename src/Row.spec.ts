@@ -1,4 +1,4 @@
-import { Row as VR, extract, extend } from './Row'
+import { Row as VR, extract, extend, mapOr } from './Row'
 import { EQ, StrictEquals } from '../spec/Equals.spec'
 
 type Row = {
@@ -23,12 +23,6 @@ const row: Row = {
   b: { value: 420 },
   c: { value: 69 }
 }
-
-// type T = VR.VarMap<Col & { $tag: "id" }, {
-//   a: () => number
-//   b: () => number
-//   c: () => string
-// }>
 
 describe('Row', () => {
   describe("extract", () => {
@@ -76,6 +70,57 @@ describe('Row', () => {
           | { $tag: "id", id: "c", type: "number", value: number }
         > = EQ
       expect(res).toMatchObject({$tag: "id", id: "a", type: "string", value: "eyy"})
+    })
+  })
+
+  describe('mapOr', () => {
+    it("Narrows return value if variant is known", () => {
+      const res = mapOr({
+        a: () => 1,
+        b: () => "a",
+        c: () => true,
+      }, (): null => null)({
+        $tag: "id",
+        ...cols.a
+      })
+      const test
+        : StrictEquals<
+          typeof res,
+          { $tag: "id", id: "a", result: number }
+        > = EQ
+      expect(res).toMatchObject({ $tag: "id", id: "a", result: 1 })
+    })
+
+    it("Distributes return value if variant is unknown", () => {
+      const res = mapOr({
+        a: () => 1,
+        b: () => "a",
+        c: () => true,
+      }, (): null => null)({
+        $tag: "id",
+        ...(cols.a as Col)
+      })
+      const test
+        : StrictEquals<
+          typeof res,
+          | { $tag: "id", id: "a", result: number }
+          | { $tag: "id", id: "b", result: string }
+          | { $tag: "id", id: "c", result: boolean }
+        > = EQ
+      expect(res).toMatchObject({ $tag: "id", id: "a", result: 1 })
+    })
+
+    it("Returns fallback value if variant is unhandled", () => {
+      const res = mapOr({
+        a: () => 1,
+        b: () => "a",
+        c: () => true,
+      }, (): null => null)({
+        $tag: "type",
+        ...cols.a
+      })
+      const test: StrictEquals<typeof res, null> = EQ
+      expect(res).toBe(null)
     })
   })
 })

@@ -25,7 +25,7 @@ export namespace Variant {
     V extends Var<string>,
     K extends Keys<V> = Keys<V>
   > = { $tag: V["$tag"] }
-    & { [k in V["$tag"]]: K }
+    & { [_ in V["$tag"]]: K }
 
   export type At<
     V extends Var<any>,

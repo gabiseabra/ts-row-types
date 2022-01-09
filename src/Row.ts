@@ -1,5 +1,5 @@
 import { Record as R } from './Record' 
-import { Variant as V } from './Variant'
+import { meta, Variant as V } from './Variant'
 
 export namespace Row {
   export type Extract<V extends V.Var<any>, R extends R.Rec>
@@ -17,16 +17,23 @@ export namespace Row {
         ? r & v : never : never
       }[V.Keys<V> & R.Keys<R>]
 
-  export type Handler<V extends V.Var<any>> = {
-    [tag in V.Keys<V>]: (v: V.Get<V, tag>) => any
+  export type Handler = Record<string, (v: any) => any>
+
+  export interface Map<R extends Handler, E = never> {
+    < V extends V.Var<T>,
+      T extends string = V["$tag"]
+    >(V: V): Mapped<R, V> extends never ? E : Mapped<R, V> 
   }
 
-  // export type VarMap<
-  //   V extends V.Var<any>,
-  //   R extends Handler<V>,
-  // > = {
-  //   [k in V.Keys<V>]: { result: ReturnType<R[k]> } & V.Meta<V, k>
-  // }[V.Keys<V>]
+  export type Mapped<
+    R extends Handler,
+    V extends V.Var<any>
+  > = {
+    [k in V.Keys<V>]
+      : R[k] extends (v: V.Get<V, k>) => infer A
+      ? { result: A } & V.Meta<V, k>
+      : never
+  }[V.Keys<V>]
 }
 
 export function extract<
@@ -34,7 +41,7 @@ export function extract<
   R extends R.Rec,
   T extends string = V["$tag"]
 >(V: V, R: R): Row.Extract<V, R> {
-  return { $tag: V.$tag, [V.$tag]: V[V.$tag], ...R[V[V.$tag]] }
+  return { ...meta(V), ...R[V[V.$tag]] }
 }
 
 export function extend<
@@ -45,14 +52,16 @@ export function extend<
   return { ...V, ...R[V[V.$tag]] }
 }
 
-// export declare function map<
-//   V extends V.Var<T>,
-//   R extends Handler<V>,
-//   T extends string = string
-// >(R: R): (V: V) => VarMap<V, R> {
-//   return (V) => ({
-//     $tag: V.$tag,
-//     []
-//     const v = V[V.$tag]
-//   }
-// }
+export function mapOr<R extends Row.Handler, E>(R: R, E: (V: V.Var<any>) => E): Row.Map<R, E> {
+  return (V) => {
+    const k = V[V.$tag]
+    if (!R[k]) return E(V) as any
+    return {...meta(V), result: R[k](V)}
+  }
+}
+
+export function map<R extends Row.Handler>(R: R): Row.Map<R> {
+  return mapOr(R, (V) => {
+    throw new Error(`Unhandled variant: ${V}`)
+  })
+}
