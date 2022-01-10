@@ -63,7 +63,7 @@ describe('Row', () => {
           typeof res,
           { $tag: ID, id: "b", test: unknown }
         > = EQ
-      expect(res).toMatchObject({$tag: "id", id: "a"})
+      expect(res).toMatchObject({$tag: "id", id: "b"})
     })
   })
 
@@ -75,7 +75,7 @@ describe('Row', () => {
           typeof res,
           { $tag: ID, id: "a", value: string } | undefined
         > = EQ
-      expect(res).toMatchObject({$tag: "id", id: "a", value: "eyy"})
+      expect(res).toBe(undefined)
     })
 
     it("Distributes result if variant is unknown", () => {

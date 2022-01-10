@@ -65,7 +65,7 @@ export function extendMaybe<
 V extends V.Var,
 R extends Partial<Row.Lookup<V, Record<any, any>>>,
 >(V: V, R: R): Row.Extend<V, PartialIn<R>> {
-  return { ...meta(V), ...lookup(V, R) } as any
+  return { ...V, ...lookup(V, R) }
 }
 
 export function extend<
