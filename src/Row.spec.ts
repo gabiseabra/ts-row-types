@@ -1,6 +1,5 @@
-import { Row as VR, extract, extend, map, extendMaybe } from './Row'
+import { Row as VR, extract, extend, map, extendMaybe, extractMaybe, pick, lookup } from './Row'
 import { EQ, StrictEquals } from '../spec/Equals.spec'
-import { Variant } from './Variant'
 
 type ID = typeof ID
 const ID = "id" as const
@@ -32,6 +31,67 @@ const row: Row = {
 }
 
 describe('Row', () => {
+  describe("lookup", () => {
+    it("With shared key", () => {
+      const res = lookup({$tag: ID, ...cols.a}, { a: "lmao" })
+      const typeEquals: StrictEquals<typeof res, string> = EQ
+      expect(res).toBe("lmao")
+    })
+
+    it("Without shared key", () => {
+      const t1 = lookup({$tag: ID, ...cols.b}, { a: "lmao" })
+      const typeEquals1: StrictEquals<typeof t1, unknown> = EQ
+      expect(t1).toBe(undefined)
+    })
+  })
+
+  describe("pick", () => {
+    it("With shared key", () => {
+      const res = pick("test", {$tag: ID, ...cols.a}, { a: "lmao" })
+      const typeEquals
+        : StrictEquals<
+          typeof res,
+          { $tag: ID, id: "a", test: string }
+        > = EQ
+      expect(res).toMatchObject({$tag: "id", id: "a", test: "lmao"})  
+    })
+
+    it("Without shared key", () => {
+      const res = pick("test", {$tag: ID, ...cols.b}, { a: "lmao" })
+      const typeEquals
+        : StrictEquals<
+          typeof res,
+          { $tag: ID, id: "b", test: unknown }
+        > = EQ
+      expect(res).toMatchObject({$tag: "id", id: "a"})
+    })
+  })
+
+  describe("extractMaybe", () => {
+    it("Narrows result if variant is known", () => {
+      const res = extractMaybe({$tag: ID, ...cols.a}, {} as Partial<Row>)
+      const typeEquals
+        : StrictEquals<
+          typeof res,
+          { $tag: ID, id: "a", value: string } | undefined
+        > = EQ
+      expect(res).toMatchObject({$tag: "id", id: "a", value: "eyy"})
+    })
+
+    it("Distributes result if variant is unknown", () => {
+      const res = extractMaybe({$tag: ID, ...(cols.a as Col)}, row)
+      const typeEquals
+        : StrictEquals<
+          typeof res,
+          | { $tag: ID, id: "a", value: string }
+          | { $tag: ID, id: "b", value: number }
+          | { $tag: ID, id: "c", value: number }
+          | undefined
+        > = EQ
+      expect(res).toMatchObject({$tag: ID, id: "a", value: "eyy"})
+    })
+  })
+
   describe("extract", () => {
     it("Narrows result if variant is known", () => {
       const res = extract({$tag: ID, ...cols.a}, row)
@@ -63,6 +123,30 @@ describe('Row', () => {
     })
   })
 
+  describe("extendMaybe", () => {
+    it("Narrows result if variant is known", () => {
+      const res = extendMaybe({$tag: ID, ...cols.a}, {} as Partial<Row>)
+      const typeEquals
+        : StrictEquals<
+          typeof res,
+          { $tag: ID, id: "a", type: "string", value?: string }
+        > = EQ
+      expect(res).toMatchObject({$tag: "id", id: "a", type: "string"})
+    })
+
+    it("Distributes result if variant is unknown", () => {
+      const res = extendMaybe({$tag: ID, ...(cols.a as Col)}, {} as Partial<Row>)
+      const typeEquals
+        : StrictEquals<
+          typeof res,
+          | { $tag: ID, id: "a", type: "string", value?: string }
+          | { $tag: ID, id: "b", type: "number", value?: number }
+          | { $tag: ID, id: "c", type: "number", value?: number }
+        > = EQ
+      expect(res).toMatchObject({$tag: "id", id: "a", type: "string"})
+    })
+  })
+
   describe("extend", () => {
     it("Narrows result if variant is known", () => {
       const res = extend({$tag: ID, ...cols.a}, row)
@@ -89,7 +173,7 @@ describe('Row', () => {
     it("Doesn't type check if tags don't match", () => {
       expect(() => {
         // @ts-expect-error
-        const res = extend({$tag: TYPE, ...(cols.a as Col)}, row)
+        extend({$tag: TYPE, ...(cols.a as Col)}, row)
       }).toThrow()
     })
   })

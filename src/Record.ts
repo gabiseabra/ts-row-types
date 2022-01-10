@@ -52,7 +52,7 @@ export namespace Record {
    *  b: string
    * }
    */
-  export type PickAt<
+  export type PickIn<
     R extends { [_ in string]: { [_ in K]: any } },
     K extends string
   > = {

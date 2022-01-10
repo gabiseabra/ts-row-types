@@ -2,11 +2,17 @@ import { Record as R } from './Record'
 import { meta, Variant as V } from './Variant'
 
 export namespace Row {
+  export type Lookup<V extends V.Var, T = any> = Record<V.Keys<V>, T>
+
   export type Extract<V extends V.Var, R extends R.Rec>
     = { $tag: V.Tag<V> } & R.Tagged<R, V.Tag<V>>[V.Keys<V>]
 
   export type Extend<V extends V.Var, R extends R.Rec>
     = V & R.Tagged<R, V.Tag<V>>[V.Keys<V>]
+
+  export type Pick<K extends string, V extends V.Var, R extends R.Rec> = {
+    [tag in V.Keys<V>]: V.Meta<V, tag> & { [_ in K]: R[tag] }
+  }[V.Keys<V>]
 
   export type Handler<R> = {
     [k in keyof R]: (a: R[k]) => any
@@ -22,51 +28,51 @@ export namespace Row {
 
 type PartialIn<R> = { [k in keyof R]: Partial<R[k]> }
 
-export function pickMaybe<
+export function lookup<
   V extends V.Var,
-  R extends Partial<Record<V.Keys<V>, any>>,
->(V: V, R: R): R[V.Keys<V>] | undefined {
-  const k = V[V.$tag] as V.Keys<V>
-  return R[k]
+  R extends Record<string, any>,
+>(V: V, R: R): R[V.Keys<V>] {
+  return R[V[V.$tag]]
 }
 
 export function pick<
+  K extends string,
   V extends V.Var,
-  R extends Record<V.Keys<V>, any>,
->(V: V, R: R): R[V.Keys<V>] {
-  return pickMaybe(V, R)!
+  R extends Record<string, any>,
+>(K: K, V: V, R: R): Row.Pick<K, V, R> {
+  return { ...meta(V), [K]: lookup(V, R) } as any
 }
 
 export function extractMaybe<
   V extends V.Var,
-  R extends Partial<Record<V.Keys<V>, any>>,
+  R extends Partial<Row.Lookup<V, Record<any, any>>>,
 >(V: V, R: R): Row.Extract<V, R> | undefined {
-  const data = pickMaybe(V, R)
+  const data = lookup(V, R)
   if (!data) return undefined
   return { ...meta(V), ...data }
 }
 
 export function extract<
   V extends V.Var,
-  R extends Record<V.Keys<V>, any>,
+  R extends Row.Lookup<V, Record<any, any>>,
 >(V: V, R: R): Row.Extract<V, R> {
-  const res = pick(V, R)
+  const res = lookup(V, R)
   if (!res) missingVariantKey(V)
   return { ...meta(V), ...res }
 }
 
 export function extendMaybe<
 V extends V.Var,
-R extends Partial<Record<V.Keys<V>, Record<any, any>>>,
+R extends Partial<Row.Lookup<V, Record<any, any>>>,
 >(V: V, R: R): Row.Extend<V, PartialIn<R>> {
-  return { ...meta(V), ...pickMaybe(V, R) } as any
+  return { ...meta(V), ...lookup(V, R) } as any
 }
 
 export function extend<
 V extends V.Var,
-R extends Record<V.Keys<V>, Record<any, any>>,
+R extends Row.Lookup<V, Record<any, any>>,
 >(V: V, R: R): Row.Extend<V, R> {
-  const res = pick(V, R)
+  const res = lookup(V, R)
   if (!res) missingVariantKey(V)
   return { ...V, ...res }
 }
@@ -75,7 +81,7 @@ export function map<
   V extends V.Var,
   R extends Row.Handler<V.ToRec<V>>
 >(V: V, R: R): Row.Mapped<V, R> {
-  const res = pick(V, R) as Function
+  const res = lookup(V, R) as Function
   if (!res) missingVariantKey(V)
   return ({...meta(V), result: res(V)})
 }

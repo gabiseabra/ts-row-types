@@ -76,7 +76,7 @@ describe('Rec', () => {
     it("Gets a value by key from a record's each property", () => {
       const test
         : StrictEquals<
-          R.PickAt<Row, "value">,
+          R.PickIn<Row, "value">,
           { a: string
           , b: number
           , c: number
