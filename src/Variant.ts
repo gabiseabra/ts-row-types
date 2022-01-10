@@ -3,14 +3,14 @@ export namespace Variant {
     = { $tag: tag }
     & { [_ in tag]: string }
 
-  export type Tag<V> = V extends Var<infer T> ? T : never
+  export type Tag<V extends Var> = V["$tag"]
 
   export type Keys<V extends Var> = V[Tag<V>]
 
   export type Query<
-  V extends { [_ in K]: any },
-  K extends keyof V,
-  A extends V[K]
+    V extends { [_ in K]: any },
+    K extends keyof V,
+    A extends V[K]
   > = Extract<V, { [_ in K]: A }>
 
   export type Pick<

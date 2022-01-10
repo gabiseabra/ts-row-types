@@ -59,8 +59,13 @@ export namespace Record {
     [key in keyof R]: R[key][K]
   }
 
+  export type Tagged<
+    R extends Rec,
+    tag extends string
+  > = { [k in keyof R]: { [_ in tag]: k } & R[k] }
+
   export type ToVar<
     R extends Rec,
     tag extends string
-  > = { [k in keyof R]: { [_ in tag]: k } & R[k] }[keyof R]
+  > = Tagged<R, tag>[keyof R]
 }

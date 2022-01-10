@@ -3,61 +3,83 @@ import { meta, Variant as V } from './Variant'
 
 export namespace Row {
   export type Extract<V extends V.Var, R extends R.Rec>
-    = { [k in (V.Keys<V> & R.Keys<R>)]
-        : V.Pick<V, k> extends any
-        ? R.Get<R, k> extends infer r
-        ? r & V.Meta<V, k>
-        : never : never
-      }[V.Keys<V> & R.Keys<R>]
+    = { $tag: V.Tag<V> } & R.Tagged<R, V.Tag<V>>[V.Keys<V>]
 
   export type Extend<V extends V.Var, R extends R.Rec>
-    = { [k in (V.Keys<V> & R.Keys<R>)]
-        : V.Pick<V, k> extends infer v
-        ? R.Get<R, k> extends infer r
-        ? r & v : never : never
-      }[V.Keys<V> & R.Keys<R>]
+    = V & R.Tagged<R, V.Tag<V>>[V.Keys<V>]
 
-  export type Handler = Record<string, (v: any) => any>
-
-  export interface Map<R extends Handler, E = never> {
-    <V extends V.Var>(V: V): Mapped<R, V> extends never ? E : Mapped<R, V>
+  export type Handler<R> = {
+    [k in keyof R]: (a: R[k]) => any
   }
 
   export type Mapped<
-    R extends Handler,
-    V extends V.Var
+    V extends V.Var,
+    R extends Handler<V.ToRec<V>>,
   > = {
-    [k in V.Keys<V>]
-      : R[k] extends (v: V.Get<V, k>) => infer A
-      ? { result: A } & V.Meta<V, k>
-      : never
+    [k in V.Keys<V>]: { result: ReturnType<R[k]> } & V.Meta<V, k>
   }[V.Keys<V>]
+}
+
+type PartialIn<R> = { [k in keyof R]: Partial<R[k]> }
+
+export function pickMaybe<
+  V extends V.Var,
+  R extends Partial<Record<V.Keys<V>, any>>,
+>(V: V, R: R): R[V.Keys<V>] | undefined {
+  const k = V[V.$tag] as V.Keys<V>
+  return R[k]
+}
+
+export function pick<
+  V extends V.Var,
+  R extends Record<V.Keys<V>, any>,
+>(V: V, R: R): R[V.Keys<V>] {
+  return pickMaybe(V, R)!
+}
+
+export function extractMaybe<
+  V extends V.Var,
+  R extends Partial<Record<V.Keys<V>, any>>,
+>(V: V, R: R): Row.Extract<V, R> | undefined {
+  const data = pickMaybe(V, R)
+  if (!data) return undefined
+  return { ...meta(V), ...data }
 }
 
 export function extract<
   V extends V.Var,
-  R extends R.Rec,
+  R extends Record<V.Keys<V>, any>,
 >(V: V, R: R): Row.Extract<V, R> {
-  return { ...meta(V), ...R[V[V.$tag]] }
+  const res = pick(V, R)
+  if (!res) missingVariantKey(V)
+  return { ...meta(V), ...res }
+}
+
+export function extendMaybe<
+V extends V.Var,
+R extends Partial<Record<V.Keys<V>, Record<any, any>>>,
+>(V: V, R: R): Row.Extend<V, PartialIn<R>> {
+  return { ...meta(V), ...pickMaybe(V, R) } as any
 }
 
 export function extend<
-  V extends V.Var,
-  R extends R.Rec,
+V extends V.Var,
+R extends Record<V.Keys<V>, Record<any, any>>,
 >(V: V, R: R): Row.Extend<V, R> {
-  return { ...V, ...R[V[V.$tag]] }
+  const res = pick(V, R)
+  if (!res) missingVariantKey(V)
+  return { ...V, ...res }
 }
 
-export function mapOr<R extends Row.Handler, E>(R: R, E: (V: V.Var<any>) => E): Row.Map<R, E> {
-  return (V) => {
-    const k = V[V.$tag]
-    if (!R[k]) return E(V) as any
-    return {...meta(V), result: R[k](V)}
-  }
+export function map<
+  V extends V.Var,
+  R extends Row.Handler<V.ToRec<V>>
+>(V: V, R: R): Row.Mapped<V, R> {
+  const res = pick(V, R) as Function
+  if (!res) missingVariantKey(V)
+  return ({...meta(V), result: res(V)})
 }
 
-export function map<R extends Row.Handler>(R: R): Row.Map<R> {
-  return mapOr(R, (V) => {
-    throw new Error(`Unhandled variant: ${V}`)
-  })
+const missingVariantKey = (V: V.Var): never => {
+  throw new Error(`Required variant key ${V[V.$tag]} is missing.`)
 }
